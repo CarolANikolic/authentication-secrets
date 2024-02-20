@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import queries from "./queries.js";
 import db from "./db.js";
+import bcrypt from "bcrypt";
 
 const app = express();
 const port = 3000;
