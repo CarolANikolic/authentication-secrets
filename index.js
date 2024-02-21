@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 
 const app = express();
 const port = 3000;
+const saltRounds = 10;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -32,9 +33,17 @@ app.post("/register", async (req, res) => {
 
   try {
     const resultByEmail = await db.query(queries.queryByEmail, [email]);
+    
     if (!resultByEmail.rows.length) {
-      await db.query(queries.insertUser, [email, password])
-      res.render('secrets.ejs');
+      // Password Hashing
+      bcrypt.hash(password, saltRounds, async (error, hash) => {
+        if (error) {
+          console.log('Error hashing password:', error);
+        } else {
+          await db.query(queries.insertUser, [email, hash])
+          res.render('secrets.ejs');
+        }
+      });
     } else {
       res.send('Email alread exists. Try loggin in.')
     }
