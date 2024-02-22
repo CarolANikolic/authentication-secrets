@@ -3,6 +3,8 @@ import bodyParser from "body-parser";
 import queries from "./queries.js";
 import db from "./db.js";
 import bcrypt from "bcrypt";
+import session from "express-session";
+import passport from "passport";
 
 const app = express();
 const port = 3000;
@@ -10,6 +12,18 @@ const saltRounds = 10;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+app.use(session({
+  secret: 'TOPSECRET',
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24,
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.get("/", (req, res) => {
   res.render("home.ejs");
