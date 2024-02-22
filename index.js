@@ -55,27 +55,30 @@ app.post("/register", async (req, res) => {
 
 app.post("/login", async (req, res) => {
   const email = req.body.username;
-  const password = req.body.password;
+  const loginPassword = req.body.password;
 
-  if (!email || !password) {
+  if (!email || !loginPassword) {
     return res.send('Email and password cannot be empty.');
   }
 
   try {
     const resultByEmail = await db.query(queries.queryByEmail, [email]);
-    const resultByPassword = await db.query(queries.queryByPassword, [password]);
-
-    if(!resultByPassword.rows.length) {
-      return res.send('Wrong password. Try again.');
-    }
     
-    if (resultByEmail.rows.length && resultByPassword.rows.length) {
+    if (resultByEmail.rows.length) {
       const user = resultByEmail.rows[0];
-      if (user.password === password) {
-        res.render('secrets.ejs');
-      } else {
-        res.send('Wrong password. Try again.');
-      }
+      console.log(user)
+      bcrypt.compare(loginPassword, user.password, (error, result) => {
+        console.log(result)
+        if(error) {
+          console.log('Error comparing passwords:', error);
+        } else {
+          if (result) {
+            res.render('secrets.ejs');
+          } else {
+            res.send('Wrong password. Try again.');
+          }
+        }
+      });
     } else {
       res.send('User not registered. Please, create an account.');
     }
