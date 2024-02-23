@@ -5,6 +5,7 @@ import db from "./db.js";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import passport from "passport";
+import { Strategy } from "passport-local";
 
 const app = express();
 const port = 3000;
@@ -19,22 +20,30 @@ app.use(session({
   saveUninitialized: true,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24,
-  }
+  },
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get("/", (req, res) => {
-  res.render("home.ejs");
+app.get('/', (req, res) => {
+  res.render('home.ejs');
 });
 
-app.get("/login", (req, res) => {
-  res.render("login.ejs");
+app.get('/login', (req, res) => {
+  res.render('login.ejs');
 });
 
-app.get("/register", (req, res) => {
-  res.render("register.ejs");
+app.get('/register', (req, res) => {
+  res.render('register.ejs');
+});
+
+app.get('/secrets', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render('secrets.ejs')
+  } else {
+    res.redirect('/login')
+  }
 });
 
 app.post("/register", async (req, res) => {
@@ -67,40 +76,43 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
-  const email = req.body.username;
-  const loginPassword = req.body.password;
+app.post("/login", passport.authenticate('local', {
+  successRedirect: '/secrets',
+  failureRedirect: '/login'
+}));
 
-  if (!email || !loginPassword) {
-    return res.send('Email and password cannot be empty.');
-  }
-
+passport.use(new Strategy(async function verify(username, password, cb) {
   try {
-    const resultByEmail = await db.query(queries.queryByEmail, [email]);
+    const resultByEmail = await db.query(queries.queryByEmail, [username]);
     
     if (resultByEmail.rows.length) {
       const user = resultByEmail.rows[0];
-      console.log(user)
-      bcrypt.compare(loginPassword, user.password, (error, result) => {
-        console.log(result)
+      bcrypt.compare(password, user.password, (error, result) => {
         if(error) {
-          console.log('Error comparing passwords:', error);
+          return cb(error)
         } else {
           if (result) {
-            res.render('secrets.ejs');
+            return cb(null, user)
           } else {
-            res.send('Wrong password. Try again.');
+            return cb(null, false)
           }
         }
       });
     } else {
-      res.send('User not registered. Please, create an account.');
+      return cb('User not registered. Please, create an account.');
     }
     
   } catch (error) {
-    console.log('Error logging in the user:', error);
-    res.status(500).send('Internal server error.');
+    return cb(error);
   }
+}));
+
+passport.serializeUser((user, cb) => {
+  cb(null, user);
+});
+
+passport.deserializeUser((user, cb) => {
+  cb(null, user);
 });
 
 app.listen(port, () => {
