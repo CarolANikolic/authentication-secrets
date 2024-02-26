@@ -64,6 +64,13 @@ app.get(
   })
 );
 
+app.get('/logout', (req, res) => {
+  req.logout((error) => {
+    if (error) console.log(error);
+    res.redirect('/')
+  })
+});
+
 app.post("/register", async (req, res) => {
   const email = req.body.username;
   const password = req.body.password;
